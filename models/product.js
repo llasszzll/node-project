@@ -1,35 +1,92 @@
-const Sequelize = require('sequelize');
+const mongodb = require('mongodb');
+const getDb = require('../util/database').getDb; // MongoDb database function from datajas.js
 
-const sequelize = require('../util/database');
-
-const Product = sequelize.define('product', {
-    id: {
-        type: Sequelize.INTEGER,
-        autoIncrement: true,
-        allowNull: false,
-        primaryKey: true
-    },
-    title: Sequelize.STRING,
-    price: {
-        type: Sequelize.DOUBLE,
-        allowNull: false
-    },
-    imageUrl: {
-        type: Sequelize.STRING,
-        allowNull: false
-    },
-    description: {
-        type: Sequelize.STRING,
-        allowNull: false
+// What I am getting from a product when making a request
+class Product {
+    constructor(title, price, description, imageUrl, id, userId) {
+        this.title = title;
+        this.price = price;
+        this.description = description;
+        this.imageUrl = imageUrl;
+        this._id = id ? new mongodb.ObjectId(id) : null;
+        this.userId = userId;
+    }
+    // saving item to database
+    // insert 1 item to database that has a condition .then() and .catch() if error
+    save() {
+        const db = getDb();
+        let dbOp;
+        if (this._id) {
+            // Update the product
+            dbOp = db
+                .collection('products')
+                .updateOne({ _id: this._id }, { $set: this });
+        } else {
+            // Insert new doc in database
+            dbOp = db.collection('products').insertOne(this);
+            // insertMany()
+        }
+        return dbOp
+            .then(result => {
+                console.log(result);
+            })
+            .catch(err => {
+                console.log(err);
+            });
     }
 
-});
+    static fetchAll() {
+        const db = getDb();
+        return db
+            .collection('products')
+            .find()
+            .toArray()
+            .then(products => {
+                return products;
+            })
+            .catch(err => {
+                console.log(err);
+            });
+    }
 
+    static findById(prodId) {
+        const db = getDb();
+        return db
+            .collection('products')
+            .find({ _id: new mongodb.ObjectId(prodId) })
+            .next()
+            .then(product => {
+                console.log(product);
+                return product;
+            })
+            .catch(err => {
+                console.log(err);
+            })
+    }
+    static deleteById(prodId) {
+        const db = getDb();
+        return db.collection('products')
+            .deleteOne({ _id: new mongodb.ObjectId(prodId) })
+            .then(result => {
+                console.log('DELETED 1 ITEM');
+            })
+            .catch(err => {
+                console.log(err);
+            })
+
+    }
+}
+
+// REMEBER to export your files so that it can be reached you idiot!
 module.exports = Product;
 
 
 
 /* -------------------------------------------------------*/
+// const Sequelize = require('sequelize');
+
+// const sequelize = require('../util/database');
+
 // const db = require('../util/database')
 
 // const Cart = require('./cart');

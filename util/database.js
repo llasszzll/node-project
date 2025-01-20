@@ -1,22 +1,30 @@
-const Sequelize = require('sequelize');
+const mongodb = require('mongodb');
+const MongoClient = mongodb.MongoClient;
 
-const sequelize = new Sequelize('node_shop', 'root', 'Lategansql18',
-    {
-        dialect: 'mysql',
-        host: 'localhost'
-    });
+let _db;
 
-module.exports = sequelize;
+// G1y6YtEu7pTWgUBQ
 
+const mongoConnect = (callback) => {
+    MongoClient.connect('mongodb+srv://llasszzll:G1y6YtEu7pTWgUBQ@cannabury.0gqsb.mongodb.net/?retryWrites=true&w=majority&appName=cannabury')
+        .then(client => {
+            console.log('Connected MongoDB!');
+            _db = client.db(); //calling let _db
+            callback();
+        })
+        .catch(err => {
+            console.log(err);
+            throw err;
+        })
+}
 
+// function: check if is set, if not, no entry
+const getDb = () => {
+    if (_db) {
+        return _db;
+    }
+    throw 'No Database Found!';
+};
 
-// const mysql = require('mysql2');
-
-// const pool = mysql.createPool({
-//     host: 'localhost',
-//     user: 'root', // DO NOT USE "USERNAME" as attribute
-//     database: 'node_shop',
-//     password: 'Lategansql18'
-// });
-
-// module.exports = pool.promise();
+exports.mongoConnect = mongoConnect;
+exports.getDb = getDb;
