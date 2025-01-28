@@ -65,21 +65,27 @@ exports.postEditProduct = (req, res, next) => {
     Product
         .findById(prodId)
         .then(product => {
+            if (product.userId.toString() !== req.user._id.toString()) {
+                return res.redirect('/');
+            }
             product.title = updatedTitle;
             product.price = updatedPrice;
             product.imageUrl = updatedImageUrl;
             product.description = updatedDescription;
+
             return product.save()
-        })
-        .then(result => {
-            console.log('UPDATED PRODUCT!!!');
-            res.redirect('/admin/products');
+                .then(result => {
+                    console.log('UPDATED PRODUCT!!!');
+                    res.redirect('/admin/products');
+                })
         })
         .catch(err => console.log(err))
 };
 
 exports.getProducts = (req, res, next) => {
-    Product.find()
+    // restrict user to only delete products they have created. Not allowing others
+    Product.find({ userId: req.user._id })
+        // { userId: req.user._id }
         // Populate related fields
         // .select('title price -_id')
         // .populate('userId', 'name')
@@ -97,7 +103,10 @@ exports.getProducts = (req, res, next) => {
 
 exports.postDeleteProduct = (req, res, next) => {
     const prodId = req.body.productId;
-    Product.findByIdAndDelete(prodId)
+    Product.deleteOne({
+        _id: prodId,
+        userId: req.user._id
+    })
         .then(() => {
             console.log("PRODUCT DESTROYED!!!");
             res.redirect('/admin/products')
