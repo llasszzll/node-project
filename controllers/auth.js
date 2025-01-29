@@ -3,7 +3,8 @@ const crypto = require('crypto'); // pass reset token
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer'); // only allow nodemailer to enter this :path
 const User = require('../models/user');
-const user = require('../models/user');
+
+const { validationResult } = require('express-validator')
 
 // api key:  AIzaSyBQiZVU4F0IFDUMmjwETN5wt96wKLBTMo8
 // test account
@@ -32,7 +33,12 @@ exports.getLogin = (req, res, next) => {
     res.render('auth/login', {
         path: '/login',
         pageTitle: 'Login',
-        errorMessage: message
+        errorMessage: message,
+        oldInput: {
+            email: '',
+            password: ''
+        },
+        validationErrors: []
     })
 };
 
@@ -46,7 +52,13 @@ exports.getSignUp = (req, res, next) => {
     res.render('auth/signup', {
         path: '/signup',
         pageTitle: 'Sign Up',
-        errorMessage: message
+        errorMessage: message,
+        oldInput: {
+            email: '',
+            password: '',
+            confirmPassword: '',
+        },
+        validationErrors: []
     })
 }
 
@@ -54,11 +66,36 @@ exports.postLogin = (req, res, next) => {
     const email = req.body.email;
     const password = req.body.password;
 
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) {
+        return res.status(422)
+            .render('auth/login', {
+                path: '/login',
+                pageTitle: 'Login',
+                errorMessage: errors.array()[0].msg,
+                oldInput: {
+                    email: email,
+                    password: password
+                },
+                validationErrors: errors.array()
+            })
+    }
+
     User.findOne({ email: email })
         .then(user => {
             if (!user) {
-                req.flash('error', 'Invalid Email or Password.')
-                return res.redirect('/login');
+                return res
+                    .status(422)
+                    .render('auth/login', {
+                        path: '/login',
+                        pageTitle: 'Login',
+                        errorMessage: 'Invalid Email or Password.',
+                        oldInput: {
+                            email: email,
+                            password: password
+                        },
+                        validationErrors: []
+                    })
             }
             bcrypt
                 .compare(password, user.password)
@@ -72,8 +109,18 @@ exports.postLogin = (req, res, next) => {
                             res.redirect('/');
                         });
                     };
-                    req.flash('error', 'Invalid Email or Password.')
-                    res.redirect('/login')
+                    return res
+                        .status(422)
+                        .render('auth/login', {
+                            path: '/login',
+                            pageTitle: 'Login',
+                            errorMessage: 'Invalid Email or Password.',
+                            oldInput: {
+                                email: email,
+                                password: password
+                            },
+                            validationErrors: []
+                        })
                 })
                 .catch(err => {
                     console.log(err)
@@ -88,41 +135,47 @@ exports.postLogin = (req, res, next) => {
 exports.postSignUp = (req, res, next) => {
     const email = req.body.email;
     const password = req.body.password;
-    const confirmPassword = req.body.confirmPassword;
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
+        console.log(errors.array());
+        return res.status(422)
+            .render('auth/signup', {
+                path: '/signup',
+                pageTitle: 'Sign Up',
+                errorMessage: errors.array()[0].msg,
+                oldInput: {
+                    email: email,
+                    password: password,
+                    confirmPassword: req.body.confirmPassword
+                },
+                validationErrors: errors.array()
+            })
+    }
 
     // check if duplicate user exist. - based on promise
-    User.findOne({ email: email })
-        .then(userDoc => {
-            if (userDoc) {
-                req.flash('error', 'Email already exists.')
-                return res.redirect('/signup');
-            }
-            return bcrypt
-                .hash(password, 12)
-                .then(hashedPassword => {
-                    const user = new User({
-                        email: email,
-                        password: hashedPassword,
-                        cart: { items: [] }
-                    })
-                    return user.save()
-                })
-                .then(result => {
-                    res.redirect('/login');
-                    return transporter.sendMail({
-                        to: 'llasszzll.lategan@gmail.com',
-                        from: 'llasszzll@gmail.com',
-                        subject: 'Notification',
-                        html: '<h1>You have successfully signed up. Thank You!</h1><hr><h2>Hello from EARTH.</h2>'
-                    })
-                })
-                .catch(err => {
-                    console.log(err)
-                })
+    bcrypt
+        .hash(password, 12)
+        .then(hashedPassword => {
+            const user = new User({
+                email: email,
+                password: hashedPassword,
+                cart: { items: [] }
+            })
+            return user.save()
+        })
+        .then(result => {
+            res.redirect('/login');
+            return transporter.sendMail({
+                to: 'llasszzll.lategan@gmail.com',
+                from: 'llasszzll@gmail.com',
+                subject: 'Notification',
+                html: '<h1>You have successfully signed up. Thank You!</h1><hr><h2>Hello from EARTH.</h2>'
+            })
         })
         .catch(err => {
-            console.log(err);
-        });
+            console.log(err)
+        })
 };
 
 exports.postLogout = (req, res, next) => {
