@@ -1,3 +1,5 @@
+const mongoose = require('mongoose');
+
 const { validationResult } = require('express-validator');
 const Product = require('../models/product');
 
@@ -23,7 +25,7 @@ exports.postAddProduct = (req, res, next) => {
         console.log(errors.array());
         return res.status(422).render('admin/edit-product', {
             pageTitle: 'Add Product',
-            path: '/admin/edit-product',
+            path: '/admin/add-product',
             editing: false,
             hasError: true,
             product: {
@@ -38,6 +40,7 @@ exports.postAddProduct = (req, res, next) => {
     }
 
     const product = new Product({
+        // _id: new mongoose.Types.ObjectId('678f94dd7b5baf30e717f0ba'),
         title: title,
         price: price,
         description: description,
@@ -52,7 +55,28 @@ exports.postAddProduct = (req, res, next) => {
             console.log('Created Product');
             res.redirect('/admin/products')
         })
-        .catch(err => console.log(err));
+        .catch(err => {
+            console.log('An Error Occurred!');
+            console.log(err)
+            // return res.status(500).render('admin/edit-product', {
+            //     pageTitle: 'Add Product',
+            //     path: '/admin/add-product',
+            //     editing: false,
+            //     hasError: true,
+            //     product: {
+            //         title: title,
+            //         imageUrl: imageUrl,
+            //         price: price,
+            //         description: description
+            //     },
+            //     errorMessage: 'Database Operation Failed!',
+            //     ValidationErrors: []
+            // })
+            // res.redirect('/500');
+            const error = new Error(err)
+            error.httpStatusCode = 500;
+            return next(error);
+        });
 };
 
 exports.getEditProduct = (req, res, next) => {
@@ -64,6 +88,7 @@ exports.getEditProduct = (req, res, next) => {
     Product.findById(prodId)
         // Product.findByPk(prodId)
         .then(product => {
+            // throw new Error('Dummy Error')
             if (!product) {
                 return res.redirect('/');
             }
@@ -77,7 +102,11 @@ exports.getEditProduct = (req, res, next) => {
                 validationErrors: []
             })
         })
-        .catch(err => console.log(err));
+        .catch(err => {
+            const error = new Error(err)
+            error.httpStatusCode = 500;
+            return next(error);
+        });
 
 };
 
@@ -126,7 +155,11 @@ exports.postEditProduct = (req, res, next) => {
                     res.redirect('/admin/products');
                 })
         })
-        .catch(err => console.log(err))
+        .catch(err => {
+            const error = new Error(err)
+            error.httpStatusCode = 500;
+            return next(error);
+        })
 };
 
 exports.getProducts = (req, res, next) => {
@@ -137,14 +170,18 @@ exports.getProducts = (req, res, next) => {
         // .select('title price -_id')
         // .populate('userId', 'name')
         .then(products => {
-            console.log(products);
+            // console.log(products);
             res.render('admin/products', {
                 prods: products,
                 pageTitle: 'Admin Products',
                 path: '/admin/products',
             });
         })
-        .catch(err => console.log(err));
+        .catch(err => {
+            const error = new Error(err)
+            error.httpStatusCode = 500;
+            return next(error);
+        });
 
 };
 
@@ -158,5 +195,9 @@ exports.postDeleteProduct = (req, res, next) => {
             console.log("PRODUCT DESTROYED!!!");
             res.redirect('/admin/products')
         })
-        .catch(err => console.log(err));
+        .catch(err => {
+            const error = new Error(err)
+            error.httpStatusCode = 500;
+            return next(error);
+        });
 };

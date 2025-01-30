@@ -46,7 +46,7 @@ router.post('/signup',
         // custom validator to check Confirm Password
         body('confirmPassword').trim().custom((value, { req }) => {
             if (value !== req.body.password) {
-                throw new Error('Password have to match.')
+                throw new Error('Passwords have to match.')
             }
             return true;
         })
